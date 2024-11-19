@@ -65,7 +65,7 @@ export default function ItemInfo ({
   const isPost = !item.parentId
   const mySub = (me && sub && Number(me.id) === sub.userId)
   const myPost = (me && root && Number(me.id) === Number(root.user.id))
-  const rootReply = item.path.split('.').length === 2
+  const rootReply = item.path?.split('.').length === 2
   const canPin = (isPost && mySub) || (myPost && rootReply)
   const meSats = (me ? item.meSats : item.meAnonSats) || 0
 

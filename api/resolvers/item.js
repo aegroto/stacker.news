@@ -43,19 +43,34 @@ function commentsOrderByClause (me, models, sort) {
 }
 
 async function comments (me, models, id, sort) {
-  const orderBy = commentsOrderByClause(me, models, sort)
+  // const orderBy = commentsOrderByClause(me, models, sort)
 
-  if (me) {
-    const filter = ` AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID' OR "Item"."userId" = ${me.id}) `
-    const [{ item_comments_zaprank_with_me: comments }] = await models.$queryRawUnsafe(
-      'SELECT item_comments_zaprank_with_me($1::INTEGER, $2::INTEGER, $3::INTEGER, $4::INTEGER, $5, $6)',
-      Number(id), GLOBAL_SEED, Number(me.id), COMMENT_DEPTH_LIMIT, filter, orderBy)
-    return comments
-  }
+  // if (me) {
+  //   const filter = ` AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID' OR "Item"."userId" = ${me.id}) `
+  //   const [{ item_comments_zaprank_with_me: comments }] = await models.$queryRawUnsafe(
+  //     'SELECT item_comments_zaprank_with_me($1::INTEGER, $2::INTEGER, $3::INTEGER, $4::INTEGER, $5, $6)',
+  //     Number(id), GLOBAL_SEED, Number(me.id), COMMENT_DEPTH_LIMIT, filter, orderBy)
 
-  const filter = ' AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = \'PAID\') '
-  const [{ item_comments: comments }] = await models.$queryRawUnsafe(
-    'SELECT item_comments($1::INTEGER, $2::INTEGER, $3, $4)', Number(id), COMMENT_DEPTH_LIMIT, filter, orderBy)
+  //   return comments
+  // }
+
+  // const filter = ' AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = \'PAID\') '
+  // const [{ item_comments: comments }] = await models.$queryRawUnsafe(
+  //   'SELECT item_comments($1::INTEGER, $2::INTEGER, $3, $4)', Number(id), COMMENT_DEPTH_LIMIT, filter, orderBy)
+  // return comments
+
+  const comments = await models.item.findMany({
+    where: {
+      parent: {
+        id
+      }
+    }
+  })
+
+  // comments.forEach((comment) => {
+  //   console.log('comment ' + comment.id + ' path: ' + comment.path)
+  // })
+
   return comments
 }
 
@@ -67,9 +82,9 @@ export async function getItem (parent, { id }, { me, models }) {
       ${SELECT}
       FROM "Item"
       ${whereClause(
-        '"Item".id = $1',
-        activeOrMine(me)
-      )}`
+      '"Item".id = $1',
+      activeOrMine(me)
+    )}`
   }, Number(id))
   return item
 }
@@ -83,15 +98,15 @@ export async function getAd (parent, { sub, subArr = [], showNsfw = false }, { m
       FROM "Item"
       LEFT JOIN "Sub" ON "Sub"."name" = "Item"."subName"
       ${whereClause(
-        '"parentId" IS NULL',
-        '"Item"."pinId" IS NULL',
-        '"Item"."deletedAt" IS NULL',
-        '"Item"."parentId" IS NULL',
-        '"Item".bio = false',
-        '"Item".boost > 0',
-        activeOrMine(),
-        subClause(sub, 1, 'Item', me, showNsfw),
-        muteClause(me))}
+      '"parentId" IS NULL',
+      '"Item"."pinId" IS NULL',
+      '"Item"."deletedAt" IS NULL',
+      '"Item"."parentId" IS NULL',
+      '"Item".bio = false',
+      '"Item".boost > 0',
+      activeOrMine(),
+      subClause(sub, 1, 'Item', me, showNsfw),
+      muteClause(me))}
       ORDER BY boost desc, "Item".created_at ASC
       LIMIT 1`
   }, ...subArr))?.[0] || null
@@ -376,12 +391,12 @@ export default {
               ${selectClause(type)}
               ${relationClause(type)}
               ${whereClause(
-                `"${table}"."userId" = $3`,
-                activeOrMine(me),
-                nsfwClause(showNsfw),
-                typeClause(type),
-                by === 'boost' && '"Item".boost > 0',
-                whenClause(when || 'forever', table))}
+              `"${table}"."userId" = $3`,
+              activeOrMine(me),
+              nsfwClause(showNsfw),
+              typeClause(type),
+              by === 'boost' && '"Item".boost > 0',
+              whenClause(when || 'forever', table))}
               ${orderByClause(by, me, models, type)}
               OFFSET $4
               LIMIT $5`,
@@ -396,14 +411,14 @@ export default {
               ${SELECT}
               ${relationClause(type)}
               ${whereClause(
-                '"Item".created_at <= $1',
-                '"Item"."deletedAt" IS NULL',
-                subClause(sub, 4, subClauseTable(type), me, showNsfw),
-                activeOrMine(me),
-                await filterClause(me, models, type),
-                typeClause(type),
-                muteClause(me)
-              )}
+              '"Item".created_at <= $1',
+              '"Item"."deletedAt" IS NULL',
+              subClause(sub, 4, subClauseTable(type), me, showNsfw),
+              activeOrMine(me),
+              await filterClause(me, models, type),
+              typeClause(type),
+              muteClause(me)
+            )}
               ORDER BY "Item".created_at DESC
               OFFSET $2
               LIMIT $3`,
@@ -418,14 +433,14 @@ export default {
               ${selectClause(type)}
               ${relationClause(type)}
               ${whereClause(
-                '"Item"."deletedAt" IS NULL',
-                type === 'posts' && '"Item"."subName" IS NOT NULL',
-                subClause(sub, 5, subClauseTable(type), me, showNsfw),
-                typeClause(type),
-                whenClause(when, 'Item'),
-                await filterClause(me, models, type),
-                by === 'boost' && '"Item".boost > 0',
-                muteClause(me))}
+              '"Item"."deletedAt" IS NULL',
+              type === 'posts' && '"Item"."subName" IS NOT NULL',
+              subClause(sub, 5, subClauseTable(type), me, showNsfw),
+              typeClause(type),
+              whenClause(when, 'Item'),
+              await filterClause(me, models, type),
+              by === 'boost' && '"Item".boost > 0',
+              muteClause(me))}
               ${orderByClause(by || 'zaprank', me, models, type)}
               OFFSET $3
               LIMIT $4`,
@@ -440,17 +455,17 @@ export default {
               ${selectClause(type)}
               ${relationClause(type)}
               ${whereClause(
-                '"Item"."deletedAt" IS NULL',
-                '"Item"."weightedVotes" - "Item"."weightedDownVotes" > 2',
-                '"Item"."ncomments" > 0',
-                '"Item"."parentId" IS NULL',
-                '"Item".bio = false',
-                type === 'posts' && '"Item"."subName" IS NOT NULL',
-                subClause(sub, 3, subClauseTable(type), me, showNsfw),
-                typeClause(type),
-                await filterClause(me, models, type),
-                activeOrMine(me),
-                muteClause(me))}
+              '"Item"."deletedAt" IS NULL',
+              '"Item"."weightedVotes" - "Item"."weightedDownVotes" > 2',
+              '"Item"."ncomments" > 0',
+              '"Item"."parentId" IS NULL',
+              '"Item".bio = false',
+              type === 'posts' && '"Item"."subName" IS NOT NULL',
+              subClause(sub, 3, subClauseTable(type), me, showNsfw),
+              typeClause(type),
+              await filterClause(me, models, type),
+              activeOrMine(me),
+              muteClause(me))}
               ${orderByClause('random', me, models, type)}
               OFFSET $1
               LIMIT $2`,
@@ -476,13 +491,13 @@ export default {
                          ELSE rank() OVER (ORDER BY created_at DESC) END AS rank
                     FROM "Item"
                     ${whereClause(
-                      '"parentId" IS NULL',
-                      '"Item"."deletedAt" IS NULL',
-                      '"Item"."status" = \'ACTIVE\'',
-                      'created_at <= $1',
-                      '"pinId" IS NULL',
-                      subClause(sub, 4)
-                    )}
+                  '"parentId" IS NULL',
+                  '"Item"."deletedAt" IS NULL',
+                  '"Item"."status" = \'ACTIVE\'',
+                  'created_at <= $1',
+                  '"pinId" IS NULL',
+                  subClause(sub, 4)
+                )}
                     ORDER BY group_rank DESC, rank
                   OFFSET $2
                   LIMIT $3`,
@@ -491,7 +506,7 @@ export default {
               break
             default:
               if (decodedCursor.offset === 0) {
-              // get pins for the page and return those separately
+                // get pins for the page and return those separately
                 pins = await itemQueryWithMeta({
                   me,
                   models,
@@ -506,10 +521,10 @@ export default {
                       FROM "Item"
                       JOIN "Pin" ON "Item"."pinId" = "Pin".id
                       ${whereClause(
-                        '"pinId" IS NOT NULL',
-                        '"parentId" IS NULL',
-                        sub ? '"subName" = $1' : '"subName" IS NULL',
-                        muteClause(me))}
+                    '"pinId" IS NOT NULL',
+                    '"parentId" IS NULL',
+                    sub ? '"subName" = $1' : '"subName" IS NULL',
+                    muteClause(me))}
                   ) rank_filter WHERE RANK = 1
                   ORDER BY position ASC`,
                   orderBy: 'ORDER BY position ASC'
@@ -527,17 +542,17 @@ export default {
                     LEFT JOIN "Sub" ON "Sub"."name" = "Item"."subName"
                     ${joinZapRankPersonalView(me, models)}
                     ${whereClause(
-                      // in "home" (sub undefined), we want to show pinned items (but without the pin icon)
-                      sub ? '"Item"."pinId" IS NULL' : '',
-                      '"Item"."deletedAt" IS NULL',
-                      '"Item"."parentId" IS NULL',
-                      '"Item".outlawed = false',
-                      '"Item".bio = false',
-                      ad ? `"Item".id <> ${ad.id}` : '',
-                      activeOrMine(me),
-                      await filterClause(me, models, type),
-                      subClause(sub, 3, 'Item', me, showNsfw),
-                      muteClause(me))}
+                  // in "home" (sub undefined), we want to show pinned items (but without the pin icon)
+                  sub ? '"Item"."pinId" IS NULL' : '',
+                  '"Item"."deletedAt" IS NULL',
+                  '"Item"."parentId" IS NULL',
+                  '"Item".outlawed = false',
+                  '"Item".bio = false',
+                  ad ? `"Item".id <> ${ad.id}` : '',
+                  activeOrMine(me),
+                  await filterClause(me, models, type),
+                  subClause(sub, 3, 'Item', me, showNsfw),
+                  muteClause(me))}
                     ORDER BY rank DESC
                     OFFSET $1
                     LIMIT $2`,
@@ -554,16 +569,16 @@ export default {
                       FROM "Item"
                       LEFT JOIN "Sub" ON "Sub"."name" = "Item"."subName"
                       ${whereClause(
-                        subClause(sub, 3, 'Item', me, showNsfw),
-                        muteClause(me),
-                        // in "home" (sub undefined), we want to show pinned items (but without the pin icon)
-                        sub ? '"Item"."pinId" IS NULL' : '',
-                        '"Item"."deletedAt" IS NULL',
-                        '"Item"."parentId" IS NULL',
-                        '"Item".bio = false',
-                        ad ? `"Item".id <> ${ad.id}` : '',
-                        activeOrMine(me),
-                        await filterClause(me, models, type))}
+                    subClause(sub, 3, 'Item', me, showNsfw),
+                    muteClause(me),
+                    // in "home" (sub undefined), we want to show pinned items (but without the pin icon)
+                    sub ? '"Item"."pinId" IS NULL' : '',
+                    '"Item"."deletedAt" IS NULL',
+                    '"Item"."parentId" IS NULL',
+                    '"Item".bio = false',
+                    ad ? `"Item".id <> ${ad.id}` : '',
+                    activeOrMine(me),
+                    await filterClause(me, models, type))}
                         ORDER BY ${orderByNumerator({ models, considerBoost: true })}/POWER(GREATEST(3, EXTRACT(EPOCH FROM (now_utc() - "Item".created_at))/3600), 1.3) DESC NULLS LAST,
                           "Item".msats DESC, ("Item".cost > 0) DESC, "Item".id DESC
                       OFFSET $1
@@ -797,8 +812,7 @@ export default {
         const [{ count: npins }] = await models.$queryRawUnsafe(`
           SELECT COUNT(p.id) FROM "Pin" p
           JOIN "Item" i ON i."pinId" = p.id
-          ${
-            whereClause(item.subName ? 'i."subName" = $1' : 'i."parentId" = $1')
+          ${whereClause(item.subName ? 'i."subName" = $1' : 'i."parentId" = $1')
           }`, ...args)
 
         if (npins >= 3) {
@@ -1275,9 +1289,9 @@ export default {
           ${SELECT}
           FROM "Item"
           ${whereClause(
-            '"Item".id = $1',
-            `("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID'${me ? ` OR "Item"."userId" = ${me.id}` : ''})`
-          )}`
+          '"Item".id = $1',
+          `("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID'${me ? ` OR "Item"."userId" = ${me.id}` : ''})`
+        )}`
       }, Number(item.rootId))
 
       return root
