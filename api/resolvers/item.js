@@ -43,35 +43,35 @@ function commentsOrderByClause (me, models, sort) {
 }
 
 async function comments (me, models, id, sort) {
-  // const orderBy = commentsOrderByClause(me, models, sort)
+  const orderBy = commentsOrderByClause(me, models, sort)
 
-  // if (me) {
-  //   const filter = ` AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID' OR "Item"."userId" = ${me.id}) `
-  //   const [{ item_comments_zaprank_with_me: comments }] = await models.$queryRawUnsafe(
-  //     'SELECT item_comments_zaprank_with_me($1::INTEGER, $2::INTEGER, $3::INTEGER, $4::INTEGER, $5, $6)',
-  //     Number(id), GLOBAL_SEED, Number(me.id), COMMENT_DEPTH_LIMIT, filter, orderBy)
+  if (me) {
+    const filter = ` AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = 'PAID' OR "Item"."userId" = ${me.id}) `
+    const [{ item_comments_zaprank_with_me: comments }] = await models.$queryRawUnsafe(
+      'SELECT item_comments_zaprank_with_me($1::INTEGER, $2::INTEGER, $3::INTEGER, $4::INTEGER, $5, $6)',
+      Number(id), GLOBAL_SEED, Number(me.id), COMMENT_DEPTH_LIMIT, filter, orderBy)
 
-  //   return comments
-  // }
+    return comments
+  }
 
-  // const filter = ' AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = \'PAID\') '
-  // const [{ item_comments: comments }] = await models.$queryRawUnsafe(
-  //   'SELECT item_comments($1::INTEGER, $2::INTEGER, $3, $4)', Number(id), COMMENT_DEPTH_LIMIT, filter, orderBy)
-  // return comments
+  const filter = ' AND ("Item"."invoiceActionState" IS NULL OR "Item"."invoiceActionState" = \'PAID\') '
+  const [{ item_comments: comments }] = await models.$queryRawUnsafe(
+    'SELECT item_comments($1::INTEGER, $2::INTEGER, $3, $4)', Number(id), COMMENT_DEPTH_LIMIT, filter, orderBy)
+  return comments
 
-  const comments = await models.item.findMany({
-    where: {
-      parent: {
-        id
-      }
-    }
-  })
+  // const comments = await models.item.findMany({
+  //   where: {
+  //     parent: {
+  //       id
+  //     }
+  //   }
+  // })
 
   // comments.forEach((comment) => {
   //   console.log('comment ' + comment.id + ' path: ' + comment.path)
   // })
 
-  return comments
+  // return comments
 }
 
 export async function getItem (parent, { id }, { me, models }) {

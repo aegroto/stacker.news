@@ -5,6 +5,6 @@ CREATE OR REPLACE FUNCTION paginated_item_comments(item_id INT)
 BEGIN ATOMIC
     SELECT "text", "path"
     FROM "Item"
-    WHERE "Item"."parentId" = item_id;
+    WHERE CAST("Item"."path" as text) LIKE item_id || '.%';
 END;
-SELECT paginated_item_comments(459388);
+SELECT paginated_item_comments(458289);
