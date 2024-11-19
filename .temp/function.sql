@@ -1,0 +1,10 @@
+DROP FUNCTION paginated_item_comments(item_id INT);
+CREATE OR REPLACE FUNCTION paginated_item_comments(item_id INT)
+  RETURNS table ("text" text, "path" text)
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+    SELECT "text", "path"
+    FROM "Item"
+    WHERE "Item"."parentId" = item_id;
+END;
+SELECT paginated_item_comments(459388);
